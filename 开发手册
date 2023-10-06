@@ -8,30 +8,465 @@
 其他需要的软件： IDEA
 
 3. 项目结构
+/src: 源代码目录
 
-  主要文件描述：
-  CryptoUI.java:
-  负责图形用户界面的渲染和交互。
-  用户可以在这里输入待加密或解密的文本、指定密钥，并执行相应的操作。
-  Main.java:
-  包含核心的加密和解密逻辑。
-  实现了S-DES算法以及其他相关加密函数。
-  cheat.java:
-  包含暴力破解密钥的测试逻辑。
-  通过两对明文密文破解密钥，结果可能不止一个。
+主要文件描述：
+CryptoUI.java:
+负责图形用户界面的渲染和交互。
+用户可以在这里输入待加密或解密的文本、指定密钥，并执行相应的操作。
+Main.java:
+包含核心的加密和解密逻辑。
+实现了S-DES算法以及其他相关加密函数。
+cheat.java:
+包含暴力破解密钥的测试逻辑。
+通过两对明文密文破解密钥，结果可能不止一个。
 
 4. 主要组件和模块
 UI模块：
-负责渲染用户界面并处理用户输入。
+我们这里基于javaswing搭建了两个ui界面，分别用于加密/解密和暴力破解密钥
+界面1：
+public class CryptoUI {
+    private JFrame frame;
+    private JTextArea inputTextArea, outputTextArea, keyTextArea;
+    private JButton encryptButton, decryptButton, generateKeyButton, cheatButton;
 
-加密模块：
-包括S-DES和ACC_Des算法。
+    public CryptoUI() {
+        frame = new JFrame("S-DES Crypto");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(550, 600);
 
+        frame.setLayout(new GridBagLayout());
+        GridBagConstraints constraints = new GridBagConstraints();
+
+        JPanel keyPanel = new JPanel(new BorderLayout());
+        keyTextArea = new JTextArea("Please enter the key");  // 5行, 20列
+        styleTextArea(keyTextArea);
+        keyPanel.add(keyTextArea, BorderLayout.CENTER);
+
+        generateKeyButton = new JButton("Generate Key");
+        generateKeyButton.setFont(new Font("微软雅黑", Font.BOLD, 14));
+        keyPanel.add(generateKeyButton, BorderLayout.EAST);
+        generateKeyButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                keyTextArea.setText(generateRandomBinaryKey());
+            }
+        });
+
+        JPanel inputPanel = new JPanel(new BorderLayout());
+        inputTextArea = new JTextArea("Please enter the content you need to encrypt/decrypt");
+        styleTextArea(inputTextArea);
+        inputPanel.add(inputTextArea, BorderLayout.CENTER);
+
+        JPanel buttonPanel = new JPanel();
+        encryptButton = new JButton("加密");
+        decryptButton = new JButton("解密");
+        cheatButton = new JButton("密钥破解");
+        encryptButton.setFont(new Font("微软雅黑", Font.BOLD, 14));
+        decryptButton.setFont(new Font("微软雅黑", Font.BOLD, 14));
+        cheatButton.setFont(new Font("微软雅黑", Font.BOLD, 14));
+        buttonPanel.add(encryptButton);
+        buttonPanel.add(decryptButton);
+        buttonPanel.add(cheatButton);
+
+        encryptButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String input = inputTextArea.getText();
+                String key = keyTextArea.getText();
+                String encrypted = encryptFunction(input, key);
+                outputTextArea.setText(encrypted);
+            }
+        });
+
+        decryptButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String input = inputTextArea.getText();
+                String key = keyTextArea.getText();
+                String decrypted = decryptFunction(input, key);
+                outputTextArea.setText(decrypted);
+            }
+        });
+
+        cheatButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                new CheatUI();
+            }
+        });
+
+        JPanel outputPanel = new JPanel(new BorderLayout());
+        outputTextArea = new JTextArea("Encryption/Decryption Results");
+        styleTextArea(outputTextArea);
+        outputPanel.add(outputTextArea, BorderLayout.CENTER);
+
+        constraints.weightx = 1.0;
+        constraints.fill = GridBagConstraints.BOTH;
+        constraints.gridwidth = GridBagConstraints.REMAINDER;
+
+        constraints.weighty = 0.2;
+        constraints.gridy = 0;
+        frame.add(keyPanel, constraints);
+
+        constraints.weighty = 0.3;
+        constraints.gridy = 1;
+        frame.add(inputPanel, constraints);
+
+        constraints.weighty = 0.2;
+        constraints.gridy = 2;
+        frame.add(buttonPanel, constraints);
+
+        constraints.weighty = 0.3;
+        constraints.gridy = 3;
+        frame.add(outputPanel, constraints);
+
+        frame.setVisible(true);
+    }
+
+    private void styleTextArea(JTextArea textArea) {
+        textArea.setLineWrap(true);
+        textArea.setWrapStyleWord(true);
+        textArea.setFont(new Font("Arial", Font.PLAIN, 16));
+        textArea.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+    }
+
+    private String generateRandomBinaryKey() {
+        StringBuilder key = new StringBuilder();
+        Random rand = new Random();
+        for (int i = 0; i < 10; i++) {
+            key.append(rand.nextInt(2)); // Generates 0 or 1
+        }
+        return key.toString();
+    }
+
+
+    private String encryptFunction(String input, String key) {
+        char[] inputArray = input.toCharArray();
+        char[] keyArray = key.toCharArray();
+        if (input.length() != 8 || !input.matches("[01]+")) {
+            return Main.ACC_Des(0, input, keyArray);
+        } else {
+            return new String(Main.My_Des(0, inputArray, keyArray));
+        }
+    }
+
+    private String decryptFunction(String input, String key) {
+        char[] inputArray = input.toCharArray();
+        char[] keyArray = key.toCharArray();
+        if (input.length() != 8 || !input.matches("[01]+")) {
+            return Main.ACC_Des(1, input, keyArray);
+        } else {
+            return new String(Main.My_Des(1, inputArray, keyArray));
+        }
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                new CryptoUI();
+            }
+        });
+    }
+}
+界面2：
+public class CheatUI {
+    private JFrame frame;
+    private JTextField p1Field, p2Field, c1Field, c2Field;
+    private JTextArea resultArea;
+    private JButton crackButton;
+    private JPanel inputPanel, buttonPanel;
+
+    public CheatUI() {
+        frame = new JFrame("Key Cracker");
+        frame.setSize(600, 400);
+        frame.setLayout(new BorderLayout());
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        frame.getContentPane().setBackground(new Color(135, 206, 235));  // Sky blue color
+
+        p1Field = new JTextField(10);
+        p2Field = new JTextField(10);
+        c1Field = new JTextField(10);
+        c2Field = new JTextField(10);
+        resultArea = new JTextArea(10, 40);
+        resultArea.setWrapStyleWord(true);
+        resultArea.setLineWrap(true);
+        crackButton = new JButton("Crack Key");
+
+        inputPanel = new JPanel(new GridLayout(4, 2, 10, 10));
+        inputPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        inputPanel.add(new JLabel("P1:"));
+        inputPanel.add(p1Field);
+        inputPanel.add(new JLabel("P2:"));
+        inputPanel.add(p2Field);
+        inputPanel.add(new JLabel("C1:"));
+        inputPanel.add(c1Field);
+        inputPanel.add(new JLabel("C2:"));
+        inputPanel.add(c2Field);
+
+        buttonPanel = new JPanel(new FlowLayout());
+        buttonPanel.add(crackButton);
+
+        crackButton.addActionListener(e -> crackKey());
+
+        frame.add(inputPanel, BorderLayout.NORTH);
+        frame.add(new JScrollPane(resultArea), BorderLayout.CENTER);
+        frame.add(buttonPanel, BorderLayout.SOUTH);
+
+        frame.setVisible(true);
+    }
+
+    private void crackKey() {
+        resultArea.setText("");
+
+        long start = System.currentTimeMillis();
+
+        char[][] keys = cheat.grab_keys(p1Field.getText(), c1Field.getText(), null);
+        keys = cheat.grab_keys(p2Field.getText(), c2Field.getText(), keys);
+
+        long finish = System.currentTimeMillis();
+
+        int m = cheat.m;
+
+        resultArea.append("破解完成，结果为：" + m + "\n");
+        for (int i = 0; i < m; i++) {
+            resultArea.append(String.valueOf(keys[i]) + "\n");
+        }
+        resultArea.append("耗时：" + (finish - start) + "毫秒\n");
+    }
+
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> new CheatUI());
+    }
+}
+
+
+加密/解密模块：
+亦或：
+    private static char[] XOR(char[] a, char[] b){
+        if(a.length!=b.length){
+            System.out.println("输入的数组长度不等");
+            return a;
+        } else{
+            int n=a.length;
+            char[] c = new char[n];
+            for(int i=0;i<n;i++){
+                if(a[i]==b[i]){
+                    c[i] = '0';
+                } else{
+                    c[i] = '1';
+                }
+            }
+            return c;
+        }
+}
+置换：
+    private static char[] round(char[] a, int[] b){
+        char[] ans = new char[b.length];
+        for (int i=0;i<b.length;i++)
+        {
+            ans[i] = a[b[i]-1];     //由于定义的常量均是1起始，此处-1能够校正数组索引。
+        }
+
+        return ans;
+    }
+获取子密钥：
+    private static char[][] GetKeys(int[] PT, int[] PE, int[] LeftShift, char[] key){
+        //秘钥初始置换P10
+        key = round(key,PT);
+        //秘钥L与R的LeftShift
+        key = round(key,LeftShift);
+        char[] k1 = round(key,PE);
+        char[] k2 = round(round(key,LeftShift),PE); //也可以如k1分开写。
+
+        return new char[][]{k1,k2};
+}
+S盒置换：
+    private static char[] Use_S_Box(char[] a){
+        char[] temp = new char[4];
+        int x1 = S_Box1[2*a[0]+a[3]-3*'0'][2*a[1]+a[2]-3*'0'];  //-3*'0'来保证char类型的ASCII码的差值在范围内，否则越界
+        int x2 = S_Box2[2*a[4]+a[7]-3*'0'][2*a[5]+a[6]-3*'0'];
+        String s = Integer.toBinaryString(4*x1+x2); //将x1左移二位后与x2做加法即等于连接
+        //当4*x1+x2小于9时，s没有四位，会导致后补0，此处修正为前补0
+        while(s.length()<4){
+            s = "0" + s;
+        }
+        temp = s.toCharArray();
+        return temp;
+}
+进行S-DES的F函数操作：
+    private static char[] fk(char[] ki, char[] L, char[] R, int[] EP_Box, int[] F_exchange){
+        char[] temp1 = round(R,EP_Box);
+        temp1 = XOR(temp1,ki);
+        temp1 = Use_S_Box(temp1);
+        temp1 = round(temp1,F_exchange);
+        L = XOR(L,temp1);
+
+        return L;
+}
+加密和解密
+    //加密过程
+    private static char[] P_TO_C(char[] P,char[] key,int[] IP,int[] EP_Box,int[] F_exchange){
+
+        //获取密钥
+        char[][] my_keys = GetKeys(P10,P8,LS,key);
+        char[] k1 = my_keys[0];
+        char[] k2 = my_keys[1];
+        //IP置换
+        char[] temp = round(P, IP);
+
+        //将IP操作后分为左右两部分
+        char[] L =  Arrays.copyOfRange(temp,0,4);
+        char[] R =  Arrays.copyOfRange(temp,4,8);
+
+        //函数化.SW操作在R的重赋值中体现，为参数顺序先R后L
+        L = fk(k1,L,R,EP_Box,F_exchange);
+        R = fk(k2,R,L,EP_Box,F_exchange);
+
+        //将R与L连接起来得到数组与IP逆置换。
+        //由于中途L与R交换了位置，因此R在左L在右
+        temp = (String.valueOf(R) + String.valueOf(L)).toCharArray();
+
+        //IP逆置换
+        temp = round(temp,IP_INV);
+
+        return temp;
+    }
+
+    //解密过程
+    private static char[] C_TO_P(char[] C,char[] key,int[] IP,int[] EP_Box,int[] F_exchange){
+        //获取密钥
+        char[][] my_keys = GetKeys(P10,P8,LS,key);
+        char[] k1 = my_keys[0];
+        char[] k2 = my_keys[1];
+        //IP置换
+        char[] temp = round(C, IP);
+
+        //将IP操作后分为左右两部分
+        char[] L =  Arrays.copyOfRange(temp,0,4);
+        char[] R =  Arrays.copyOfRange(temp,4,8);
+
+        //函数化.SW操作在R的赋值中体现，为参数顺序先R后L
+        L = fk(k2,L,R,EP_Box,F_exchange);
+        R = fk(k1,R,L,EP_Box,F_exchange);
+
+        //将R与L连接起来得到数组与IP逆置换。
+        //由于中途L与R交换了位置，因此R在左L在右
+        temp = (String.valueOf(R) + String.valueOf(L)).toCharArray();
+
+        //IP逆置换
+        temp = round(temp,IP_INV);
+        return temp;
+}
+8-bit二进制数加密：
+    public static char[] My_Des(int Mode, char[] words,char[] key){
+        if(Mode == 0){  //Mode=0表示为加密过程
+            return P_TO_C(words,key,IP,EP_Box,F_exchange);
+        } else if (Mode == 1) { //Mode=1表示为解密过程
+            return C_TO_P(words,key,IP,EP_Box,F_exchange);
+        }else {
+            System.out.println("模式不对");
+            return words;
+        }
+}
+ASCLL字符串加密：
+    public static String ACC_Des(int Mode, String words, char[] key) {
+        StringBuilder binaryStr = new StringBuilder();
+        StringBuilder result = new StringBuilder();
+
+        if (Mode == 0) {  // Encryption
+            for (char c : words.toCharArray()) {
+                binaryStr.append(String.format("%8s", Integer.toBinaryString(c)).replace(' ', '0'));
+            }
+
+            for (int i = 0; i < binaryStr.length(); i += 8) {
+                String byteStr = binaryStr.substring(i, i + 8);
+                char[] encryptedChar = My_Des(0, byteStr.toCharArray(), key);
+                String encryptedBinary = new String(encryptedChar);
+                int encryptedAscii = Integer.parseInt(encryptedBinary, 2);
+                result.append((char) encryptedAscii);
+            }
+            return result.toString();
+
+        } else if (Mode == 1) {  // Decryption
+            for (char c : words.toCharArray()) {
+                binaryStr.append(String.format("%8s", Integer.toBinaryString(c)).replace(' ', '0'));
+            }
+
+            for (int i = 0; i < binaryStr.length(); i += 8) {
+                String byteStr = binaryStr.substring(i, i + 8);
+                char[] decryptedChar = My_Des(1, byteStr.toCharArray(), key);
+                String decryptedBinary = new String(decryptedChar);
+                int decryptedAscii = Integer.parseInt(decryptedBinary, 2);
+                result.append((char) decryptedAscii);
+            }
+            return result.toString();
+
+        } else {
+            throw new IllegalArgumentException("Invalid Mode. Use 0 for encryption and 1 for decryption.");
+        }
+}
+暴力破解：
+    public static char[][] grab_keys(String P, String C, @Nullable char[][] keys) {
+        //新建一个密钥数组，为符合条件的密钥且符合keys[][]
+        char[][] my_keys = new char[1024][10];
+        char[] inputArray = P.toCharArray();
+        if(keys==null){
+            m = 0;
+            //当不给定keys[][]时，对所有密钥进行检验。
+            for(int i=0;i<1024;i++){
+                String key = Integer.toBinaryString(i);
+                while(key.length()<10){
+                    key = "0" + key;
+                }
+                char[] keyArray = key.toCharArray();
+
+
+                String ans = String.valueOf(Main.My_Des(0, inputArray, keyArray));
+                //找到合适的密钥则写入my_keys
+                if(ans.equals(C)){
+                    my_keys[m] = keyArray;
+                    m++;
+                }
+            }
+        } else{
+            m = 0;
+            for (char[] keyArray : keys) {
+                String ans = String.valueOf(Main.My_Des(0, inputArray, keyArray));
+                //找到合适的密钥则写入my_keys
+                if (ans.equals(C)) {
+                    my_keys[m] = keyArray;
+                    m++;
+                }
+            }
+        }
+        return my_keys;
+    }
 5. 接口文档
 My_Des接口：
-描述：S-DES的主要加密/解密函数，对8bit数据进行直接加密解密。
-参数：
-Mode: 加密或解密模式标识。
-words: 待加密/解密的文本。
-key: 密钥。
-返回值：加密或解密后的文本。
+  描述：S-DES的主要加密/解密函数，用于8bit数据的加密和解密。
+  参数：
+  Mode: 加密或解密模式标识。
+  words: 待加密/解密的文本。
+  key: 密钥。
+  返回值：加密或解密后的文本。
+
+
+ACC_Des接口：
+  描述：对字符串进行加密或解密。
+  参数：
+  Mode: 加密或解密模式标识。
+  words: 待加密/解密的文本。
+  key: 密钥。
+  返回值：加密或解密后的文本。
+
+6. 开发规范和最佳实践
+  请确保所有代码都有适当的注释。
+  遵循Java编码标准。
+
+7. 测试
+手动进行集成和系统测试。
+
